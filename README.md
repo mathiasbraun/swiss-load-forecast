@@ -9,8 +9,15 @@ information that is available at forecast time.
 
 ## Data
 
-- Swiss electricity consumption at 15-minute resolution, published by Swissgrid.
-- Historical weather data (temperature) from MeteoSwiss or Open-Meteo.
+- Target: total energy consumed by end users in the Swiss control block, at 15-minute
+  resolution (kWh), from the yearly "Energy Overview" files published by Swissgrid.
+  End-user consumption excludes pumped-storage pumping, power plant own consumption
+  and grid losses, which depend on market and plant operation rather than on demand.
+- Timestamps mark the end of each 15-minute interval.
+- Weather data (temperature) from MeteoSwiss or Open-Meteo.
+
+The data is not included in this repository. See the Swissgrid page
+"energy data ch" for the source files.
 
 ## Planned approach
 
