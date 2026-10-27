@@ -4,3 +4,4 @@ openpyxl
 matplotlib
 scikit-learn
 ipykernel
+pyarrow

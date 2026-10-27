@@ -40,3 +40,9 @@ def load_year(path):
         index = index + pd.Timedelta(minutes=15)
 
     return pd.Series(df["load"].to_numpy(), index=index, name="load")
+
+
+def load_all(years, raw_dir):
+    """Load several Swissgrid yearly files and concatenate them into one series."""
+    series = [load_year(f"{raw_dir}/EnergieUebersichtCH-{year}.xlsx") for year in years]
+    return pd.concat(series)
