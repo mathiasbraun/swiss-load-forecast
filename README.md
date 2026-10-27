@@ -16,6 +16,12 @@ information that is available at forecast time.
 - Timestamps mark the end of each 15-minute interval.
 - Weather data (temperature) from MeteoSwiss or Open-Meteo.
 
+**Data quirks handled in `src/data.py`:**
+- Labels around the October DST change differ between years; the UTC time grid is
+  therefore built from the first and last timestamp of each file, with a row-count check.
+- From 2025 on, Swissgrid labels intervals by their start instead of their end; this is
+  detected and converted to end-of-interval labels.
+
 The data is not included in this repository. See the Swissgrid page
 "energy data ch" for the source files.
 
