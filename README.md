@@ -26,7 +26,7 @@ The data is not included in this repository. See the Swissgrid page "energy data
 ## Approach
 
 1. Data loading and cleaning (2020–2025): unified UTC time grid without gaps, duplicates or daylight saving shifts, consistent interval labels, sanity checks. ✅
-2. Baselines: same hour one week earlier, and the average of the same hour over the previous weeks. *In progress.*
+2. Baselines: same hour one week earlier ✅ (average of the same hour over the previous weeks: planned).
 3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization.
 4. Gradient boosting (LightGBM).
 5. A small neural network in PyTorch.
@@ -40,6 +40,16 @@ The data is not included in this repository. See the Swissgrid page "energy data
   between models can be judged.
 - Errors are analysed by conditions known in advance, such as season, weekday,
   holidays and temperature.
+
+## Results
+
+Validation year 2024 (hourly load, 8'784 hours):
+
+| Model | MAE [MW] | MAPE [%] |
+|---|---|---|
+| Baseline: same hour one week earlier | 362 | 5.84 |
+
+The baseline is around 5 % on ordinary days; its largest errors occur on public holidays and one week after them (see `notebooks/02_baseline.ipynb`).
 
 ## Status
 
