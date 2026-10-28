@@ -4,8 +4,7 @@ Forecasting Swiss electricity consumption 24 hours ahead.
 
 ## Goal
 
-Predict the Swiss electricity load for each hour of the following day, using only
-information that is available at forecast time.
+Predict the Swiss electricity load for each **hour** of the following day, using only information that is available at forecast time.
 
 ## Data
 
@@ -13,31 +12,28 @@ information that is available at forecast time.
   resolution (kWh), from the yearly "Energy Overview" files published by Swissgrid.
   End-user consumption excludes pumped-storage pumping, power plant own consumption
   and grid losses, which depend on market and plant operation rather than on demand.
-- Timestamps mark the end of each 15-minute interval.
+- Timestamps mark the **start or end** of each 15-minute interval; streamlined in data cleaning.
 - Weather data (temperature) from MeteoSwiss or Open-Meteo.
 
-**Data quirks handled in `src/data.py`:**
+**Data quirks handled in `src/data.py`.**
 - Labels around the October DST change differ between years; the UTC time grid is
   therefore built from the first and last timestamp of each file, with a row-count check.
 - From 2025 on, Swissgrid labels intervals by their start instead of their end; this is
   detected and converted to end-of-interval labels.
 
-The data is not included in this repository. See the Swissgrid page
-"energy data ch" for the source files.
+The data is not included in this repository. See the Swissgrid page "energy data ch" for the source files.
 
-## Planned approach
+## Approach
 
-1. Baselines: same hour one week earlier, and the average of the same hour over the
-   previous weeks.
-2. Linear models with calendar, holiday, temperature and lagged load features,
-   with Ridge and Lasso regularization.
-3. Gradient boosting (LightGBM).
-4. A small neural network in PyTorch.
+1. Data loading and cleaning (2020–2025): unified UTC time grid without gaps, duplicates or daylight saving shifts, consistent interval labels, sanity checks. ✅
+2. Baselines: same hour one week earlier, and the average of the same hour over the previous weeks. *In progress.*
+3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization.
+4. Gradient boosting (LightGBM).
+5. A small neural network in PyTorch.
 
 ## Evaluation principles
 
-- Strictly chronological splits. Hyperparameters are chosen by rolling-origin
-  (walk-forward) validation, and the test period is used once.
+- Strictly chronological splits. Hyperparameters are chosen by rolling-origin (walk-forward) validation, and the test period is used once.
 - Features only use information available at the time of the forecast.
 - Every model is compared against the baselines.
 - Error estimates come with uncertainty (bootstrap over days), so that differences
