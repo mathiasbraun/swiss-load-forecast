@@ -26,14 +26,14 @@ The data is not included in this repository. See the Swissgrid page "energy data
 ## Approach
 
 1. Data loading and cleaning (2020–2025): unified UTC time grid without gaps, duplicates or daylight saving shifts, consistent interval labels, sanity checks. ✅
-2. Baselines: same hour one week earlier ✅ (average of the same hour over the previous weeks: planned).
+2. Baselines: same hour one week earlier, and the mean of the same hour over the previous four weeks. ✅
 3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization.
 4. Gradient boosting (LightGBM).
 5. A small neural network in PyTorch.
 
 ## Evaluation principles
 
-- Strictly chronological splits. Hyperparameters are chosen by rolling-origin (walk-forward) validation, and the test period is used once.
+- Strictly chronological split: **training** 2020–2023, **validation** 2024, **test** 2025. A random split would place test hours next to training hours of the same day, so the model would only interpolate and the error would be too optimistic. Hyperparameters will be chosen by rolling-origin (walk-forward) validation, and the test year is used once at the very end.
 - Features only use information available at the time of the forecast.
 - Every model is compared against the baselines.
 - Error estimates come with uncertainty (bootstrap over days), so that differences
@@ -48,8 +48,9 @@ Validation year 2024 (hourly load, 8'784 hours):
 | Model | MAE [MW] | MAPE [%] |
 |---|---|---|
 | Baseline: same hour one week earlier | 362 | 5.84 |
+| Baseline: mean of same hour over four weeks | 412 | 6.66 |
 
-The baseline is around 5 % on ordinary days; its largest errors occur on public holidays and one week after them (see `notebooks/02_baseline.ipynb`).
+The one-week baseline is around 5 % on ordinary days; its largest errors occur on public holidays and one week after them. The four-week baseline damps such single unusual weeks but performs worse overall, since it lags behind seasonal trends. The one-week baseline (more recent data) therefore remains the reference that every model must beat (see `notebooks/02_baseline.ipynb`).
 
 ## Status
 
