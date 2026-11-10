@@ -14,7 +14,13 @@ Predict the Swiss electricity load for each **hour** of the following day, using
   and grid losses, which depend on market and plant operation rather than on demand.
 - Years 2020–2025. The raw files use Swiss local time; see the data quirks below and the design decisions for how timestamps are handled.
 - Public holidays per canton from the Python package `holidays`.
-- Weather data (temperature) from MeteoSwiss or Open-Meteo (planned).
+- Temperature: day-ahead forecasts from the Open-Meteo Previous Runs API (model GFS, variable
+  `temperature_2m_previous_day1`, i.e. the forecast issued 24 hours earlier) for the eight largest
+  Swiss agglomerations, April 2021 to 2025. Archived forecasts are not available before April 2021.
+
+**Forecast archive gap.** For 30 December 2023 00:00 to 19 January 2024 11:00 UTC (492 hours), the archive
+contains no day-ahead or two-day-ahead forecasts for any location or model (GFS, ICON, ECMWF). These hours are
+*excluded* (see `notebooks/04_temperature.ipynb`).
 
 **Data quirks handled in `src/data.py`.**
 - Labels around the October DST change differ between years; the UTC time grid is
@@ -28,7 +34,7 @@ The data is not included in this repository. See the Swissgrid page "energy data
 
 1. Data loading and cleaning (2020–2025): unified UTC time grid without gaps, duplicates or daylight saving shifts, consistent interval labels, sanity checks. ✅
 2. Baselines: same hour one week earlier, and the mean of the same hour over the previous four weeks. ✅
-3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization. *In progress: calendar, holiday and lag features done; temperature and regularization to follow.*
+3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization. *In progress: calendar, holiday and lag features done; temperature forecasts loaded and aggregated (`notebooks/04_temperature.ipynb`); model with temperature and regularization to follow.*
 4. Gradient boosting (LightGBM).
 5. A small neural network in PyTorch.
 6. Final evaluation of the selected models on the test year 2025 (used once), with bootstrap uncertainty and error analysis; a script that reproduces all results.
@@ -36,6 +42,7 @@ The data is not included in this repository. See the Swissgrid page "energy data
 ## Evaluation principles
 
 - Strictly chronological split: **training** 2020–2023, **validation** 2024, **test** 2025. A random split would place test hours next to training hours of the same day, so the model would only interpolate and the error would be too optimistic. Hyperparameters will be chosen by rolling-origin (walk-forward) validation, and the test year is used once at the very end.
+- Models with temperature are trained from April 2021, when archived forecasts begin. For a fair comparison, the model without temperature is retrained and evaluated on exactly the same hours.
 - Features only use information available at the time of the forecast.
 - Every model is compared against the baselines.
 - Error estimates come with uncertainty (bootstrap over days), so that differences
@@ -59,6 +66,20 @@ The data is not included in this repository. See the Swissgrid page "energy data
 ### Forecast setting
 
 - **Forecast issued at midnight.** The forecast for day D is made at the end of day D−1, so all load values up to the end of D−1 can be used (same hour on the previous day and one week earlier). Trade-off: operational day-ahead forecasts are often issued around noon of D−1, when only part of the previous day is known.
+
+### Weather
+
+- **Forecasts instead of measurements.** At forecast time (midnight before day D), the actual temperature
+  of day D is unknown; only a weather forecast is. Using measured temperatures would leak future information
+  and make the validation error too optimistic. Trade-off: training starts in April 2021, when archived
+  forecasts begin, so about 15 months of load data are not used by models with temperature.
+- **One population-weighted temperature.** Demand follows the temperature where people live, so the
+  forecasts of the eight largest agglomerations are averaged with weights proportional to their population
+  (Swiss Federal Statistical Office, 2025). The cities are highly correlated (pairwise at least 0.93),
+  so eight separate features would be strongly collinear. Each city is represented by a single grid point.
+- **Excluding the archive gap.** The 20-day gap cannot be interpolated, filling it with measured temperatures
+  would leak, and a climatological average would be an artificial, much weaker feature. Excluding it costs
+  48 training hours and 444 validation hours (about 5 % of 2024).
 
 ### Linear models
 
