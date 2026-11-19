@@ -34,7 +34,7 @@ The data is not included in this repository. See the Swissgrid page "energy data
 
 1. Data loading and cleaning (2020–2025): unified UTC time grid without gaps, duplicates or daylight saving shifts, consistent interval labels, sanity checks. ✅
 2. Baselines: same hour one week earlier, and the mean of the same hour over the previous four weeks. ✅
-3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization. *In progress: calendar, holiday and lag features done; temperature forecasts loaded and aggregated (`notebooks/04_temperature.ipynb`); model with temperature and regularization to follow.*
+3. Linear models with calendar, holiday, temperature and lagged load features, with Ridge and Lasso regularization. *Ordinary least squares with calendar, holiday, lag and temperature features done (`notebooks/03_linear.ipynb`, `notebooks/05_linear_temperature.ipynb`); regularization to follow.*
 4. Gradient boosting (LightGBM).
 5. A small neural network in PyTorch.
 6. Final evaluation of the selected models on the test year 2025 (used once), with bootstrap uncertainty and error analysis; a script that reproduces all results.
@@ -80,6 +80,14 @@ The data is not included in this repository. See the Swissgrid page "energy data
 - **Excluding the archive gap.** The 20-day gap cannot be interpolated, filling it with measured temperatures
   would leak, and a climatological average would be an artificial, much weaker feature. Excluding it costs
   48 training hours and 444 validation hours (about 5 % of 2024).
+- **Heating degrees instead of raw temperature.** Daily load decreases almost linearly with temperature
+  below about 15 °C and is flat above (training years, see `notebooks/05_linear_temperature.ipynb`). A
+  single temperature column would force one straight line through both regimes, so the model uses
+  `max(0, 15 − T)`, which is zero above the threshold. The model stays linear in its coefficients.
+  Trade-off: the threshold is read from a plot, and a cooling effect on hot days is not modelled.
+- **Hourly temperature as the mean of start and end of the hour.** The load is an hourly average labelled
+  at the end of the hour, the forecast an instantaneous value, so the two forecast values bounding the
+  hour are averaged.
 
 ### Linear models
 
@@ -89,7 +97,9 @@ The data is not included in this repository. See the Swissgrid page "energy data
 
 ## Results
 
-Validation year 2024 (hourly load, 8'784 hours):
+All results are on the validation year 2024. The test year 2025 has not been used.
+
+**Without temperature** (training 2020–2023, all 8'784 hours of 2024):
 
 | Model | MAE [MW] | MAPE [%] |
 |---|---|---|
@@ -97,9 +107,24 @@ Validation year 2024 (hourly load, 8'784 hours):
 | Baseline: mean of same hour over four weeks | 412 | 6.66 |
 | Linear regression (calendar, holidays, load lags) | 274 | 4.55 |
 
+**With temperature** (training April 2021 to 2023, the 8'339 hours of 2024 with a temperature forecast;
+the archive gap excludes 1 to 19 January). All models are evaluated on these identical hours, so the
+errors are not comparable with the table above:
+
+| Model | MAE [MW] | MAPE [%] |
+|---|---|---|
+| Baseline: same hour one week earlier | 337 | 5.58 |
+| Baseline: mean of same hour over four weeks | 382 | 6.32 |
+| Linear regression without temperature | 263 | 4.45 |
+| Linear regression with temperature (heating degrees) | 244 | 4.21 |
+
+Uncertainty estimates (bootstrap over days) are still to be added.
+
 **Baselines.** The one-week baseline is around 5 % on ordinary days; its largest errors occur on public holidays and one week after them. It is the reference that every model must beat (see design decisions and `notebooks/02_baseline.ipynb`).
 
 **Linear regression.** It reduces the error by about 24 % compared with the baseline. The forecast is roughly an even mix of the previous day and the previous week, corrected for holidays (about −900 MW on a holiday in all cantons) and for lags that come from a holiday. The holiday peaks of the baseline are much reduced (e.g. Ascension from 26.5 % to 15.3 % daily MAPE); remaining weak spots are bridge days and ordinary working days after a holiday (see `notebooks/03_linear.ipynb`).
+
+**Temperature.** On identical hours, heating degrees reduce the MAE of the regression from 263 to 244 MW (about 7 %). The coefficient is about 50 MW per degree below 15 °C, much smaller than the slope of load against temperature, because the load lags already carry most of the temperature information (see `notebooks/05_linear_temperature.ipynb`). The lower errors in this table compared with the first one come from the excluded first weeks of January, which are hard to forecast, not from better models.
 
 ## Limitations
 
