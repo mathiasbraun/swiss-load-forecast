@@ -72,7 +72,7 @@ The data is not included in this repository. See the Swissgrid page "energy data
 - **Forecasts instead of measurements.** At forecast time (midnight before day D), the actual temperature
   of day D is unknown; only a weather forecast is. Using measured temperatures would leak future information
   and make the validation error too optimistic. Trade-off: training starts in April 2021, when archived
-  forecasts begin, so about 15 months of load data are not used by models with temperature.
+  forecasts begin, so about 15 months of load data are not used by models with temperature. The cost turns out to be negligible: trained from 2020, the linear model without temperature is only 0.25 MW better on the same validation hours.
 - **One population-weighted temperature.** Demand follows the temperature where people live, so the
   forecasts of the eight largest agglomerations are averaged with weights proportional to their population
   (Swiss Federal Statistical Office, 2025). The cities are highly correlated (pairwise at least 0.93),
@@ -84,7 +84,9 @@ The data is not included in this repository. See the Swissgrid page "energy data
   below about 15 °C and is flat above (training years, see `notebooks/05_linear_temperature.ipynb`). A
   single temperature column would force one straight line through both regimes, so the model uses
   `max(0, 15 − T)`, which is zero above the threshold. The model stays linear in its coefficients.
-  Trade-off: the threshold is read from a plot, and a cooling effect on hot days is not modelled.
+  Trade-off: the threshold is read from a plot, and a cooling effect on hot days is not modelled. The
+  validation error varies by only about 3 MW for thresholds between 13 and 18 °C, so the choice is not
+  critical.
 - **Hourly temperature as the mean of start and end of the hour.** The load is an hourly average labelled
   at the end of the hour, the forecast an instantaneous value, so the two forecast values bounding the
   hour are averaged.
